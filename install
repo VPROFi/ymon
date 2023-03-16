@@ -1,0 +1,32 @@
+#!/bin/bash
+mkdir -p ./downloads
+which wget >/dev/null || sudo apt-get --yes install wget
+
+if [ ! -e ./downloads/selenium.zip ]; then
+    wget https://files.pythonhosted.org/packages/ad/13/481aa476a9bcfec0bf74140a4c395dede0569cf56dc773abec181f95e30f/selenium-4.8.2-py3-none-any.whl -O ./downloads/selenium.zip
+fi
+
+if [ ! -e ./selenium ]; then
+    which unzip >/dev/null || sudo apt-get --yes install unzip
+    unzip -o ./downloads/selenium.zip
+fi
+
+if [ ! -e /usr/bin/google-chrome-stable ]; then
+    if [ ! -e ./downloads/selenium.zip ]; then
+        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb  -O ./downloads/google-chrome-stable_current_amd64.deb
+    fi
+    sudo dpkg -i ./downloads/google-chrome-stable_current_amd64.deb
+fi
+
+chrome_version=`/usr/bin/google-chrome-stable --version | cut -d ' ' -f3`
+if [ -e ./chromedriver ]; then
+    chromedriver_version=`./chromedriver --version | cut -d ' ' -f2`
+fi
+site_chromedriver_version=`wget https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$(echo $chrome_version | cut -d '.' -f1) -O -`
+if [ ! "$chromedriver_version" = "$site_chromedriver_version" ]; then
+    wget https://chromedriver.storage.googleapis.com/$site_chromedriver_version/chromedriver_linux64.zip -O ./downloads/chromedriver_linux64.zip
+    unzip -o ./downloads/chromedriver_linux64.zip
+fi
+
+./parseyt.py
+/usr/bin/google-chrome-stable ./index.html
