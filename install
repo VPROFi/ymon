@@ -12,7 +12,7 @@ if [ ! -e ./selenium ]; then
 fi
 
 if [ ! -e /usr/bin/google-chrome-stable ]; then
-    if [ ! -e ./downloads/selenium.zip ]; then
+    if [ ! -e ./downloads/google-chrome-stable_current_amd64.deb ]; then
         wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb  -O ./downloads/google-chrome-stable_current_amd64.deb
     fi
     sudo dpkg -i ./downloads/google-chrome-stable_current_amd64.deb
