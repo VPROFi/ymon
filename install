@@ -1,32 +1,48 @@
 #!/bin/bash
 mkdir -p ./downloads
+mkdir -p ./modules
+
 which wget >/dev/null || sudo apt-get --yes install wget
+which unzip >/dev/null || sudo apt-get --yes install unzip
 
-if [ ! -e ./downloads/selenium.zip ]; then
-    wget https://files.pythonhosted.org/packages/ad/13/481aa476a9bcfec0bf74140a4c395dede0569cf56dc773abec181f95e30f/selenium-4.8.2-py3-none-any.whl -O ./downloads/selenium.zip
-fi
+chrome="/usr/bin/google-chrome-stable"
 
-if [ ! -e ./selenium ]; then
-    which unzip >/dev/null || sudo apt-get --yes install unzip
-    unzip -o ./downloads/selenium.zip
-fi
+modules="typing_extensions.py#typing_extensions#https://files.pythonhosted.org/packages/b7/f4/6a90020cd2d93349b442bfcb657d0dc91eee65491600b2cb1d388bc98e6b/typing_extensions-4.9.0-py3-none-any.whl"
+modules="$modules selenium#selenium#https://files.pythonhosted.org/packages/97/e3/fd7272d6d2c49fd49a79a603cb28c8b5a71f8911861b4a0409b3c006a241/selenium-4.17.2-py3-none-any.whl"
+modules="$modules certifi#certifi#https://files.pythonhosted.org/packages/64/62/428ef076be88fa93716b576e4a01f919d25968913e817077a386fcbe4f42/certifi-2023.11.17-py3-none-any.whl"
+modules="$modules urllib3#urllib3#https://files.pythonhosted.org/packages/88/75/311454fd3317aefe18415f04568edc20218453b709c63c58b9292c71be17/urllib3-2.2.0-py3-none-any.whl"
+
+for mod_config in $modules; do
+	mod_test=$(echo $mod_config | cut -d '#' -f 1)
+	mod_name=$(echo $mod_config | cut -d '#' -f 2)
+	mod_url=$(echo $mod_config | cut -d '#' -f 3)
+	if [ ! -e ./modules/$mod_test ] && ! python3 -m pip freeze | grep -q -E "^$mod_name="; then
+		wget -nc $mod_url -O ./downloads/$mod_name.zip
+		unzip -d ./modules -o ./downloads/$mod_name.zip
+	fi
+done
 
 if [ ! -e /usr/bin/google-chrome-stable ]; then
-    if [ ! -e ./downloads/google-chrome-stable_current_amd64.deb ]; then
-        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb  -O ./downloads/google-chrome-stable_current_amd64.deb
-    fi
+    wget -nc https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb  -O ./downloads/google-chrome-stable_current_amd64.deb
     sudo dpkg -i ./downloads/google-chrome-stable_current_amd64.deb
 fi
 
-chrome_version=`/usr/bin/google-chrome-stable --version | cut -d ' ' -f3`
-if [ -e ./chromedriver ]; then
-    chromedriver_version=`./chromedriver --version | cut -d ' ' -f2`
-fi
-site_chromedriver_version=`wget https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$(echo $chrome_version | cut -d '.' -f1) -O -`
-if [ ! "$chromedriver_version" = "$site_chromedriver_version" ]; then
-    wget https://chromedriver.storage.googleapis.com/$site_chromedriver_version/chromedriver_linux64.zip -O ./downloads/chromedriver_linux64.zip
-    unzip -o ./downloads/chromedriver_linux64.zip
+chrome_version=`$chrome --version | cut -d ' ' -f3 | cut -d '.' -f1,2,3`
+if [ -e ./modules/chromedriver ]; then
+    chromedriver_version=`./modules/chromedriver --version | cut -d ' ' -f2`
 fi
 
-./parseyt.py
-/usr/bin/google-chrome-stable ./index.html
+site_chromedriver_json=`wget -q https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json -O -`
+site_chromedriver_version=`echo $site_chromedriver_json | grep -o -E "/($chrome_version\.[0-9]*)/" | grep -o -E "($chrome_version\.[0-9]*)" | tail -1`
+site_chromedriver_url=`echo $site_chromedriver_json | grep -o -E "(https://[[:alnum:]/+.\_-]*/$site_chromedriver_version/linux64/chromedriver-linux64.zip)"`
+
+echo chrome_version: $chrome_version chromedriver_version: $chromedriver_version site_chromedriver_version: $site_chromedriver_version
+echo site_chromedriver_url: $site_chromedriver_url
+
+if [ ! "$chromedriver_version" = "$site_chromedriver_version" ]; then
+    wget --unlink $site_chromedriver_url -O ./downloads/chromedriver_linux64.zip
+    unzip -j -d ./modules -o ./downloads/chromedriver_linux64.zip chromedriver-linux64/chromedriver
+fi
+
+PYTHONPATH=./modules python3 ./parseyt.py
+$chrome ./index.html
