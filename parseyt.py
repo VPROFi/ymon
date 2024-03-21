@@ -6,7 +6,12 @@ from selenium.webdriver.support.wait import WebDriverWait
 from parsedb import urls
 import os, shutil, html
 
-service = Service(executable_path="./chromedriver")
+
+file_path = os.path.realpath(os.path.dirname(__file__))
+
+service = Service(executable_path=os.path.join(file_path, "./modules/chromedriver"))
+#op = webdriver.ChromeOptions()
+#op.add_argument('--headless')
 
 options = webdriver.ChromeOptions()
 options.add_argument('--disable-notifications')
@@ -21,11 +26,15 @@ options.add_argument("--no-sandbox")
 
 driver = webdriver.Chrome(service=service, options=options)
 driver.maximize_window()
-if os.path.exists('./img'):
-    shutil.rmtree('./img')
-os.mkdir('./img')
 
-htmlf = open("index.html","wt")
+img_path = os.path.join(file_path, "./img")
+
+if os.path.exists(img_path):
+    shutil.rmtree(img_path)
+os.mkdir(img_path)
+
+html_file = os.path.join(file_path, "index.html")
+htmlf = open(html_file,"wt")
 htmlf.write("""
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -104,15 +113,27 @@ img {
 new = []
 
 for num, item in enumerate(urls):
+    #driver.get("https://www.selenium.dev/selenium/web/web-form.html")
     driver.get(item)
 
     title = driver.title
     driver.implicitly_wait(0.5)
 
+    #text_box = driver.find_element(by=By.NAME, value="my-text")
+    #submit_button = driver.find_element(by=By.CSS_SELECTOR, value="button")
+
+    #text_box.send_keys("Selenium")
+    #submit_button.click()
+
+    #message = driver.find_element(by=By.ID, value="message")
+
+    #el = WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(By.TAG_NAME,"p"))
+
     try:
         ytb_link = WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(by=By.ID, value="video-title-link")).get_attribute('href')
         message = WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(by=By.ID, value="video-title"))
         chname = WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(by=By.ID, value="text"))
+        #png = WebDriverWait(driver, timeout=3).until(lambda d: d.find_element(by=By.CLASS_NAME, value="style-scope ytd-rich-item-renderer"))
         value = message.text
         print(num+1, str(value), str(ytb_link))
         if urls[item][0] != ytb_link:
@@ -163,15 +184,18 @@ for num, item in enumerate(urls):
         urls[item] = (ytb_link,value)
     except:
         pass
-with open("parsedb.py","wt") as f:
+
+parsedb_file = os.path.join(file_path, "parsedb.py")
+with open(parsedb_file,"wt") as f:
     f.write("urls = " + str(urls).replace("'), '", "'),\n        '") + "\n")
-with open("sites.new","wt") as f:
+sites_file = os.path.join(file_path, "sites.new")
+with open(sites_file,"wt") as f:
     f.write("""#!/bin/bash
-/usr/bin/google-chrome-stable """)
+/usr/bin/google-chrome-stable https://rutor.info/top """)
     f.write(" ".join(new))
     f.write("\n")
 
-os.system('chmod +x sites.new')
+os.system('chmod +x '+sites_file)
 
 htmlf.write("""
 <script>
